@@ -1,6 +1,7 @@
-#ifndef OPCODES
-#define OPCODES
+#ifndef OPCODES_H
+#define OPCODES_H
 
+#define OP_LENGTH 4
 
 #define OPCODE_LIST\
     X(GPIO)\
@@ -21,12 +22,8 @@ typedef struct {
     Opcode opcode;
 } OpcodeEntry;
 
-const OpcodeEntry opcode_table[] = {
-#define X(name) { #name, OP_##name },
-    OPCODE_LIST
-#undef X
-};
+extern const OpcodeEntry opcode_table[];
 
-int get_opcode(const char *name);
+int get_opcode(const char *name, unsigned int *opcode_ptr);
 
-#endif //OPCODES
+#endif 
