@@ -5,3 +5,4 @@
 /Core/Src/sysmem.c linguist-vendored
 /Core/Src/stm32l4xx_hal_msp.c linguist-vendored
 /CMakePresets.json linguist-vendored
+/stm32-vm.ioc linguist-vendored
