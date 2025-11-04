@@ -2,13 +2,16 @@
 #define OPCODES_H
 
 #define OP_LENGTH 4
+#define NUM_REGISTERS 8
 
 #define OPCODE_LIST\
-    X(GPIO)\
-    X(OP1)\
-    X(OP2)\
-    X(OP3)\
-    X(OP4)
+    X(add)\
+    X(sub)\
+    X(jmp)\
+    X(btn)\
+    X(pix)\
+    X(cls)\
+    X(halt)
 
 typedef enum {
 #define X(name) OP_##name,
