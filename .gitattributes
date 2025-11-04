@@ -1,8 +1,11 @@
-/Drivers/** linguist-vendored
-/cmake/** linguist-vendored
-/Core/Src/syscalls.c linguist-vendored
-/Core/Src/stm32l4xx_it.c linguist-vendored
-/Core/Src/sysmem.c linguist-vendored
-/Core/Src/stm32l4xx_hal_msp.c linguist-vendored
-/CMakePresets.json linguist-vendored
-/stm32-vm.ioc linguist-vendored
+# STM32 auto-generated code (HAL, CubeMX, CMake)
+Drivers/**/* linguist-vendored
+cmake/**/* linguist-vendored
+Core/Src/syscalls.c linguist-vendored
+Core/Src/stm32l4xx_it.c linguist-vendored
+Core/Src/sysmem.c linguist-vendored
+Core/Src/stm32l4xx_hal_msp.c linguist-vendored
+
+# CubeMX project config
+CMakePresets.json linguist-vendored
+stm32-vm.ioc linguist-vendored
