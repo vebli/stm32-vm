@@ -9,7 +9,7 @@ const OpcodeEntry opcode_table[] = {
 };
 
 int get_opcode(const char* name, unsigned int *opcode_ptr){
-    for(int i = 0; i < OP_COUNT; i++){
+    for(int i = 0; i < NUM_OPCODES; i++){
         if(strcmp(opcode_table[i].name, name) == 0){
             *opcode_ptr = opcode_table[i].opcode;
             return 1;
@@ -17,3 +17,16 @@ int get_opcode(const char* name, unsigned int *opcode_ptr){
     }
     return 0;
 }
+
+void print_instruction(const Instruction* instr_ptr){
+    printf("Opcode:\t%0*d\n", OP_LENGTH, instr_ptr->opcode);
+    const char *str = "Argument %d:\n\
+    Type: %0*d\n\
+    Value: %0*d\n";
+
+    for(size_t i = 0; i < instr_ptr->args_size; i++){
+        const Arg *arg = &instr_ptr->args[i];
+        printf(str, i+1, TYPE_LENGTH, arg->type, TYPE_LENGTH, arg->value);
+    }
+}
+
