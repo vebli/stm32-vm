@@ -1,17 +1,17 @@
 #ifndef OPCODES_H
 #define OPCODES_H
 
-#include <stddef.h>
 #include <stdint.h>
 
 #define OPCODE_LIST\
-    X(add)\
-    X(sub)\
-    X(jmp)\
-    X(btn)\
-    X(pix)\
-    X(cls)\
-    X(halt)
+    X(ADD)\
+    X(MLT)\
+    X(JMP)\
+    X(MOV)\
+    X(BTN)\
+    X(PIX)\
+    X(CLS)\
+    X(HALT)
 
 typedef enum {
 #define X(name) OP_##name,
@@ -27,7 +27,7 @@ typedef enum {
 #define OPERAND_LENGTH 5
 #define NUM_REGISTERS (1 << 3)
 #define MAX_NUM_ARGUMENTS 2
-#define INSTRUCTION_LENGTH (OP_LENGTH + MAX_NUM_ARGUMENTS * (OPERAND_LENGTH + TYPE_LENGTH))
+#define INSTRUCTION_LENGTH 16
 
 typedef enum {
     IMMEDIATE,
@@ -43,7 +43,7 @@ typedef struct {
 typedef struct{
     Opcode opcode;
     Arg args[MAX_NUM_ARGUMENTS];
-    size_t args_size;
+    int args_size;
 } Instruction; 
 
 typedef struct {
@@ -54,7 +54,7 @@ typedef struct {
 extern const OpcodeEntry opcode_table[];
 
 int get_opcode(const char *name, unsigned int *opcode_ptr);
-void print_instruction(const Instruction* instr);
-// void encode_instruction(const Instruction *instr, char *instr_buffer, size_t buffer_size);
-void decode_instruction(void);
+void print_instruction(const Instruction * instr);
+void decode_instruction(uint16_t word);
+
 #endif 
