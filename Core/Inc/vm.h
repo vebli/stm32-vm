@@ -15,6 +15,8 @@ void vm_print_state();
 
 int get_instruction(uint16_t *pc, uint16_t *instr_buffer);
 
-void run_program(uint16_t *pc);
+void vm_run_program(uint16_t *pc);
+
+void vm_run_repl(uint16_t *pc);
 
 #endif 

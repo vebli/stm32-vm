@@ -26,6 +26,7 @@
 #include "vm.h"
 #include "printf_uart.h"
 #include <stdio.h>
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -45,6 +46,16 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+uint8_t rx_byte;
+const int cmd_buffer_size = 16;
+char cmd_buffer[16];
+const char help_msg[] = "Commands:\r\n\
+- run\r\n\
+- repl\r\n\
+- help\r\n\
+";
+int enable_logs = 0;
+int cmd_index = 0;
 
 /* USER CODE BEGIN PV */
 
@@ -53,7 +64,59 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+void clear_cmd_buffer(int from){
+      for(int i = from; i < cmd_buffer_size; i++){
+          cmd_buffer[i] = '\0';
+      }
+}
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+    if(huart->Instance == USART1){
+        if(rx_byte == '\n' || rx_byte == '\r'){ //on enter terminals may send \r, \n, \r\n
+            cmd_buffer[cmd_index] = '\0';
+            if(strcmp(cmd_buffer, "run") == 0){
+                printf("Starting Program...\r\n");
+                // vm_run_program(); 
+            }
+            else if(strcmp(cmd_buffer, "repl") == 0){
+                printf("Starting Repl...\r\n");
+                // run_repl();
+            }
+            else if(strcmp(cmd_buffer, "log") == 0){
+                printf("%s logs\r\n", (enable_logs ? "Disabling" : "Enabling"));
+                enable_logs ^= 1;
+            }
+            else if(strcmp(cmd_buffer, "help") == 0){
+                printf(help_msg);
+            }
+            else{
+                printf("Unknown command\r\n");
+            }
+            clear_cmd_buffer(0);
+            cmd_index = 0;
+        }
+        if(rx_byte == 0x7F || rx_byte == '\b'){ //backspace
+            if(cmd_index > 0){
+                cmd_buffer[--cmd_index] = '\0';
+                printf("\b \b"); //move cursor back once, overwrite, move back again
+            }
+            else{
+                cmd_index = 0;
+            }
+        }
+        else{
+            if(cmd_index < cmd_buffer_size){
+                cmd_buffer[cmd_index++] = rx_byte;
+            }
+            else{
+                clear_cmd_buffer(0);
+                cmd_index = 0;
+            }
+        }
+        // printf("\033[2J\033[H"); //clear
+        printf("SHELL > %s\r\n", cmd_buffer);
+        HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+    }
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -79,7 +142,6 @@ int main(void)
 
   /* USER CODE BEGIN Init */
       vm_init();
-
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -93,6 +155,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
 
   /* USER CODE END 2 */
 
@@ -100,8 +163,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      vm_print_state();
-      HAL_Delay(1000);
+      // vm_print_state();
+      // HAL_Delay(1000);
       // run_program(&program);
     /* USER CODE END WHILE */
 

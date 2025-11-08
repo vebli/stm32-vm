@@ -34,16 +34,10 @@ typedef enum {
     REGISTER
 } OperandType;
 
-typedef struct {
-    OperandType type;
-    int value;
-} Arg; 
-
-
 typedef struct{
     Opcode opcode;
-    Arg args[MAX_NUM_ARGUMENTS];
-    int args_size;
+    uint8_t arg[MAX_NUM_ARGUMENTS];
+    uint8_t arg_type[MAX_NUM_ARGUMENTS];
 } Instruction; 
 
 typedef struct {
@@ -55,6 +49,6 @@ extern const OpcodeEntry opcode_table[];
 
 int get_opcode(const char *name, unsigned int *opcode_ptr);
 void print_instruction(const Instruction * instr);
-void decode_instruction(uint16_t word);
+void decode_instruction(uint16_t instr, Instruction* decoded_instr);
 
 #endif 

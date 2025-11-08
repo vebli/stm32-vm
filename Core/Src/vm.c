@@ -31,36 +31,32 @@ void vm_print_state(){
 }
 
 //TODO: Error handling
-void run_program(uint16_t *pc){
-    uint16_t instr;
-    uint8_t arg_type[2];
-    uint8_t arg[2];
-    while(get_instruction(pc, &instr)){
-        uint8_t opcode = (instr >> 12) & 0xF;
-        arg_type[0] = (instr >> 11) & 0x1;
-        arg[0] = (instr >> 6) & 0x1F;
-        arg_type[1] = (instr >> 5) & 0x1;
-        arg[1] = instr & 0x1F;
-        for(int i = 0; i < 2; i++){
-            if(arg_type[i] == REGISTER) {
-                arg[i] = reg[arg[i]];
+void vm_run_program(uint16_t *pc){
+
+    Instruction instr;
+    uint16_t word;
+    while(get_instruction(pc, &word)){
+        decode_instruction(word, &instr);
+        for(int i = 0; i < MAX_NUM_ARGUMENTS; i++){
+            if(instr.arg_type[i] == REGISTER) {
+                instr.arg[i] = reg[instr.arg[i]];
             }
         }
-        switch(opcode){
+        switch(instr.opcode){
             case OP_ADD: 
-                reg[0] = arg[0] + arg[1]; 
+                reg[0] = instr.arg[0] + instr.arg[1]; 
                 break;
 
             case OP_MLT: 
-                reg[0] = arg[0] * arg[1]; 
+                reg[0] = instr.arg[0] * instr.arg[1]; 
                 break;
 
             case OP_MOV: 
-                reg[arg[1]] = reg[arg[0]];
+                reg[instr.arg[1]] = reg[instr.arg[0]];
                 break;
 
             case OP_JMP:
-                pc = &program[arg[1]];
+                pc = &program[instr.arg[1]];
                 break;
 
             // case OP_BTN:

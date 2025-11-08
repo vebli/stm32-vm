@@ -24,9 +24,14 @@ void print_instruction(const Instruction* instr_ptr){
     Type: %0*d\n\
     Value: %0*d\n";
 
-    for(size_t i = 0; i < instr_ptr->args_size; i++){
-        const Arg *arg = &instr_ptr->args[i];
-        printf(str, i+1, TYPE_LENGTH, arg->type, TYPE_LENGTH, arg->value);
+    for(size_t i = 0; i < MAX_NUM_ARGUMENTS; i++){
+        printf(str, i+1, TYPE_LENGTH, &instr_ptr->arg_type[i], TYPE_LENGTH, &instr_ptr->arg[i]);
     }
 }
 
+void decode_instruction(uint16_t instr, Instruction* decoded_instr){
+        decoded_instr->arg_type[0] = (instr >> 11) & 0x1;
+        decoded_instr->arg[0] = (instr >> 6) & 0x1F;
+        decoded_instr->arg_type[1] = (instr >> 5) & 0x1;
+        decoded_instr->arg[1] = instr & 0x1F;
+}

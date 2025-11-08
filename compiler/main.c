@@ -31,9 +31,9 @@ uint16_t encode_instruction(const Instruction *instr){
     int shift = 16 - OP_LENGTH;
     result |= instr->opcode << (shift--);
     for(int i = 0; i < 2; i++){
-        result |= instr->args[i].type << shift;
+        result |= instr->arg_type[i] << shift;
         shift -= OPERAND_LENGTH;
-        result |= instr->args[i].value<< shift--;
+        result |= instr->arg[i] << shift--;
     }
     return result;
 }
@@ -118,15 +118,15 @@ int main(const int argc, const char* argv[]){
                     else if(j > 1 && is_register(word_buffer)){ 
                         LOG_MSG("Argument %d:\t%s (Register)\n", word_count - 1, word_buffer);
                         const int argument_num = word_count - 2;
-                        instr.args[argument_num].type = REGISTER;
-                        instr.args[argument_num].value= atoi(&word_buffer[1]);
+                        instr.arg_type[argument_num]= REGISTER;
+                        instr.arg[argument_num] = atoi(&word_buffer[1]);
                     }
                     // Immediate Arguments
                     else{ 
                         LOG_MSG("Argument %d:\t%s (Immediate)\n", word_count - 1, word_buffer);
                         const int argument_num = word_count - 2;
-                        instr.args[argument_num].type = IMMEDIATE;
-                        instr.args[argument_num].value= atoi(word_buffer);
+                        instr.arg_type[argument_num]= IMMEDIATE;
+                        instr.arg[argument_num] = atoi(word_buffer);
                     }
                     j = 0;
                     word_count++;
@@ -137,7 +137,6 @@ int main(const int argc, const char* argv[]){
                 i++; 
             }
             LOG_MSG("Words found:\t%d\n", word_count-1);
-            instr.args_size = word_count - 2;
             uint16_t instr_word = encode_instruction(&instr);
             LOG_MSG("Instruction:\t%016b\n",  instr_word);
             fwrite(&instr_word, sizeof(instr_word), 1, wf);
