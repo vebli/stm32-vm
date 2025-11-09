@@ -64,3 +64,7 @@ void vm_run_program(uint16_t *pc){
         };
     }
 }
+
+void vm_run_repl(uint16_t *pc){
+
+}
