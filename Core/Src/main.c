@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "spi.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -46,20 +47,21 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+
+/* USER CODE BEGIN PV */
 uint8_t rx_byte;
 const int cmd_buffer_size = 16;
 char cmd_buffer[16];
 const char help_msg[] = "Commands:\r\n\
-- run\r\n\
-- repl\r\n\
-- help\r\n\
+run\r\n\
+repl\r\n\
+help\r\n\
 ";
 const char prompt[]="\r\nSHELL > ";
 int enable_logs = 0;
 int cmd_index = 0;
 uint8_t send_prompt = 0;
 
-/* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
 
@@ -70,6 +72,13 @@ void clear_cmd_buffer(int from){
       for(int i = from; i < cmd_buffer_size; i++){
           cmd_buffer[i] = '\0';
       }
+}
+
+uint8_t reverse_bits(uint8_t byte) {
+    byte = (byte >> 4) | (byte << 4);             
+    byte = ((byte & 0xCC) >> 2) | ((byte & 0x33) << 2); 
+    byte = ((byte & 0xAA) >> 1) | ((byte & 0x55) << 1); 
+    return byte;
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
     if(huart->Instance == USART1){
@@ -170,6 +179,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
   HAL_UART_Transmit_IT(&huart1, prompt, strlen(prompt));
@@ -178,10 +188,34 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint8_t VCOM_bit = 1;
+  uint8_t line = 1;
+  uint8_t pix_data[50];
+  uint8_t dummy_data[2]= {0x0, 0x0};
+  for(int i = 0; i < 25; i++){
+      pix_data[i] = 0xFF;
+  }
+  for(int i = 25; i < 50; i++){
+      pix_data[i] = 0x00;
+  }
   while (1)
   {
+      uint8_t mode = 0x80 | (VCOM_bit << 6);
+      uint8_t address = reverse_bits(line);
+      printf("Drawing on line %d:\r\n", line);
+      HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET);
+      HAL_SPI_Transmit(&hspi1, &mode, 1, HAL_MAX_DELAY);
+      HAL_SPI_Transmit(&hspi1, &address, 1, HAL_MAX_DELAY);
+      HAL_SPI_Transmit(&hspi1, pix_data, sizeof(pix_data), HAL_MAX_DELAY);
+      HAL_SPI_Transmit(&hspi1, dummy_data, sizeof(dummy_data), HAL_MAX_DELAY);
+      HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET);
+      HAL_Delay(100);
+      VCOM_bit ^= 1;
+      line = (line + 1) % 240;
+      HAL_Delay(1000);
+      /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+      /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
