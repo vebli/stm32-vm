@@ -28,6 +28,7 @@
 #include "printf_uart.h"
 #include <stdio.h>
 #include <string.h>
+#include "graphics.h"
 
 /* USER CODE END Includes */
 
@@ -74,12 +75,6 @@ void clear_cmd_buffer(int from){
       }
 }
 
-uint8_t reverse_bits(uint8_t byte) {
-    byte = (byte >> 4) | (byte << 4);             
-    byte = ((byte & 0xCC) >> 2) | ((byte & 0x33) << 2); 
-    byte = ((byte & 0xAA) >> 1) | ((byte & 0x55) << 1); 
-    return byte;
-}
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
     if(huart->Instance == USART1){
         if(rx_byte == '\n' || rx_byte == '\r'){ //on enter terminals may send \r, \n, \r\n
@@ -188,34 +183,20 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint8_t VCOM_bit = 1;
-  uint8_t line = 1;
-  uint8_t pix_data[50];
-  uint8_t dummy_data[2]= {0x0, 0x0};
-  for(int i = 0; i < 25; i++){
-      pix_data[i] = 0xFF;
+  uint8_t frame_buffer[12000];
+  for(int i = 0; i < 12000; i++){
+      frame_buffer[i] = 0x0F;
   }
-  for(int i = 25; i < 50; i++){
-      pix_data[i] = 0x00;
-  }
+  lcd_clear();
   while (1)
   {
-      uint8_t mode = 0x80 | (VCOM_bit << 6);
-      uint8_t address = reverse_bits(line);
-      printf("Drawing on line %d:\r\n", line);
-      HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_SET);
-      HAL_SPI_Transmit(&hspi1, &mode, 1, HAL_MAX_DELAY);
-      HAL_SPI_Transmit(&hspi1, &address, 1, HAL_MAX_DELAY);
-      HAL_SPI_Transmit(&hspi1, pix_data, sizeof(pix_data), HAL_MAX_DELAY);
-      HAL_SPI_Transmit(&hspi1, dummy_data, sizeof(dummy_data), HAL_MAX_DELAY);
-      HAL_GPIO_WritePin(LCD_CS_GPIO_Port, LCD_CS_Pin, GPIO_PIN_RESET);
-      HAL_Delay(100);
-      VCOM_bit ^= 1;
-      line = (line + 1) % 240;
+      lcd_draw(frame_buffer);
       HAL_Delay(1000);
-      /* USER CODE END WHILE */
+      lcd_clear();
+      HAL_Delay(1000);
+    /* USER CODE END WHILE */
 
-      /* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
