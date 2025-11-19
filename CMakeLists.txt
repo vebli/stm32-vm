@@ -50,7 +50,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Core/Src/opcodes.c
     ${CMAKE_SOURCE_DIR}/Core/Src/vm.c
     ${CMAKE_SOURCE_DIR}/Core/Src/printf_uart.c
-    ${CMAKE_SOURCE_DIR}/Core/Src/graphics.c
+    ${CMAKE_SOURCE_DIR}/Core/Src/hardware.c
 )
 
 # Add include paths

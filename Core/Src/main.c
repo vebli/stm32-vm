@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
@@ -28,7 +29,7 @@
 #include "printf_uart.h"
 #include <stdio.h>
 #include <string.h>
-#include "graphics.h"
+#include "hardware.h"
 
 /* USER CODE END Includes */
 
@@ -68,6 +69,7 @@ uint8_t send_prompt = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void PeriphCommonClock_Config(void);
 /* USER CODE BEGIN PFP */
 void clear_cmd_buffer(int from){
       for(int i = from; i < cmd_buffer_size; i++){
@@ -167,6 +169,9 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
+  /* Configure the peripherals common clocks */
+  PeriphCommonClock_Config();
+
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
@@ -175,6 +180,8 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_SPI1_Init();
+  MX_ADC3_Init();
+  MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
   HAL_UART_Transmit_IT(&huart1, prompt, strlen(prompt));
@@ -187,6 +194,7 @@ int main(void)
   for(int i = 0; i < 12000; i++){
       frame_buffer[i] = 0x0F;
   }
+  joystick_direction direction = 0;
   lcd_clear();
   while (1)
   {
@@ -194,6 +202,15 @@ int main(void)
       HAL_Delay(1000);
       lcd_clear();
       HAL_Delay(1000);
+      joystick_direction direction = joystick_read();
+      printf("direction: %d\r\n", direction);
+      if(button_read(1)){
+          printf("Pressed Button 1\r\n");
+      }
+      if(button_read(0)){
+          printf("Pressed Button 0\r\n");
+      }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -259,6 +276,31 @@ void SystemClock_Config(void)
   /** Enable MSI Auto calibration
   */
   HAL_RCCEx_EnableMSIPLLMode();
+}
+
+/**
+  * @brief Peripherals Common Clock Configuration
+  * @retval None
+  */
+void PeriphCommonClock_Config(void)
+{
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
+  /** Initializes the peripherals clock
+  */
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_PLLSAI1;
+  PeriphClkInit.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_MSI;
+  PeriphClkInit.PLLSAI1.PLLSAI1M = 1;
+  PeriphClkInit.PLLSAI1.PLLSAI1N = 24;
+  PeriphClkInit.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV7;
+  PeriphClkInit.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV2;
+  PeriphClkInit.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV2;
+  PeriphClkInit.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_ADC1CLK;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /* USER CODE BEGIN 4 */
