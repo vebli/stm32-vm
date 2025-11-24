@@ -26,18 +26,6 @@ int is_register(const char *str){
 }
 
 
-uint16_t encode_instruction(const Instruction *instr){
-    uint16_t result = 0;
-    int shift = 16 - OP_LENGTH;
-    result |= instr->opcode << (shift--);
-    for(int i = 0; i < 2; i++){
-        result |= instr->arg_type[i] << shift;
-        shift -= OPERAND_LENGTH;
-        result |= instr->arg[i] << shift--;
-    }
-    return result;
-}
-
 int main(const int argc, const char* argv[]){
     program_name = argv[0];
     if(argc == 1){ 
@@ -69,7 +57,7 @@ int main(const int argc, const char* argv[]){
 
         const size_t line_buffer_size = 128;
         char line_buffer[line_buffer_size]; 
-        const size_t word_buffer_size = 4;
+        const size_t word_buffer_size = 8;
         char word_buffer[word_buffer_size];
         unsigned int opcode;
         unsigned int line_number = 0;
@@ -106,7 +94,7 @@ int main(const int argc, const char* argv[]){
                     // Check if first word in line -> Opcode
                     if(word_count == 1){ 
                         if(get_opcode(word_buffer, &opcode)){
-                            LOG_MSG("Instruction:\t%0*b <-> %s\n", OP_LENGTH, opcode, word_buffer);
+                            LOG_MSG("Opcode:\t\t%0*b <-> %s\n", OP_LENGTH, opcode, word_buffer);
                             instr.opcode = opcode;
                         }
                         else {
@@ -138,7 +126,7 @@ int main(const int argc, const char* argv[]){
             }
             LOG_MSG("Words found:\t%d\n", word_count-1);
             uint16_t instr_word = encode_instruction(&instr);
-            LOG_MSG("Instruction:\t%016b\n",  instr_word);
+            LOG_MSG("Instruction:\t%016b <-> %04X\n",  instr_word, instr_word);
             fwrite(&instr_word, sizeof(instr_word), 1, wf);
         }
 

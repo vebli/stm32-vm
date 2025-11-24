@@ -28,6 +28,7 @@
 #include "vm.h"
 #include "printf_uart.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "hardware.h"
 
@@ -60,9 +61,9 @@ repl\r\n\
 help\r\n\
 ";
 const char prompt[]="\r\nSHELL > ";
-int enable_logs = 0;
 int cmd_index = 0;
 uint8_t send_prompt = 0;
+int run_program_flag = 0;
 
 
 /* USER CODE END PV */
@@ -78,57 +79,100 @@ void clear_cmd_buffer(int from){
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-    if(huart->Instance == USART1){
-        if(rx_byte == '\n' || rx_byte == '\r'){ //on enter terminals may send \r, \n, \r\n
-            cmd_buffer[cmd_index] = '\0';
-            if(strcmp(cmd_buffer, "run") == 0){
-                const char msg[] = "\r\nStarting Program ...";
-                HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
+    if(huart->Instance != USART1) return; 
 
-                // vm_run_program(); 
+    if(rx_byte == '\n' || rx_byte == '\r'){ //on enter terminals may send \r, \n, \r\n
+        cmd_buffer[cmd_index] = '\0';
+        if(strcmp(cmd_buffer, "run") == 0){
+            const char msg1[] = "\r\nStarting program ...";
+            HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg1, strlen(msg1));
+            run_program_flag = 1;
+        }
+        if(strcmp(cmd_buffer, "state") == 0 && !run_program_flag){
+            vm_print_state();
+        }
+        if(strcmp(cmd_buffer, "step") == 0 && !run_program_flag){
+            vm_print_state();
+            uint16_t word;
+            vm_next_instruction(&word);
+            vm_run_instructon(&word);
+        }
+        if (strcmp(cmd_buffer, "load") == 0) {
+            printf("Send program size (max %d):\r\n", PROGRAM_SIZE_BYTES);
+
+            // temporarily stop receiving interrupts
+            HAL_UART_AbortReceive(&huart1);
+
+            uint16_t size = 0;
+
+            // receive 2-byte size (little endian)
+            uint8_t size_buf[2];
+            HAL_UART_Receive(&huart1, size_buf, 2, HAL_MAX_DELAY);
+            size = size_buf[0] | (size_buf[1] << 8);
+
+            while (size > PROGRAM_SIZE_BYTES) {
+                printf("Program size %u too large. Send again:\r\n", size);
+                HAL_UART_Receive(&huart1, size_buf, 2, HAL_MAX_DELAY);
+                size = size_buf[0] | (size_buf[1] << 8);
             }
-            else if(strcmp(cmd_buffer, "repl") == 0){
-                const char msg[] = "\r\nStarting Repl...";
-                HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
-                // run_repl();
-            }
-            else if(strcmp(cmd_buffer, "log") == 0){
-                const char* msg = (enable_logs) ? "\r\nDisabling Logs" : "\r\nEnabling Logs";
-                HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
-                enable_logs ^= 1;
-            }
-            else if(strcmp(cmd_buffer, "help") == 0){
-                HAL_UART_Transmit_IT(&huart1, (uint8_t*)help_msg, strlen(help_msg));
-            }
-            else{
-                const char msg[] = "\r\nUnknown command";
-                HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
-            }
+
+            printf("Waiting for %u bytes...\r\n", size);
+
+            // receive program bytes
+            HAL_UART_Receive(&huart1, (uint8_t *)program, size, HAL_MAX_DELAY);
+
+            printf("Program loaded!\r\n");
+
+            // resume shell input
+            HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+
             clear_cmd_buffer(0);
             cmd_index = 0;
             send_prompt = 1;
+            return; // avoid falling into the rest of the shell logic
         }
-        else if(rx_byte == 0x7F || rx_byte == '\b'){ //backspace
-            if(cmd_index > 0){
-                cmd_buffer[--cmd_index] = '\0';
-                HAL_UART_Transmit_IT(&huart1, (uint8_t*)"\b \b", 3);//move cursor back once, overwrite, move back again
-            }
-            else{
-                cmd_index = 0;
-            }
+
+        else if(strcmp(cmd_buffer, "repl") == 0){
+            const char msg[] = "\r\nStarting Repl...";
+            HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
+            // run_repl();
+        }
+        else if(strcmp(cmd_buffer, "log") == 0){
+            const char* msg = (vm_enable_logs) ? "\r\nDisabling Logs" : "\r\nEnabling Logs";
+            HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
+            vm_enable_logs ^= 1;
+        }
+        else if(strcmp(cmd_buffer, "help") == 0){
+            HAL_UART_Transmit_IT(&huart1, (uint8_t*)help_msg, strlen(help_msg));
         }
         else{
-            if(cmd_index < cmd_buffer_size){
-                cmd_buffer[cmd_index++] = rx_byte;
-            }
-            else{
-                clear_cmd_buffer(0);
-                cmd_index = 0;
-            }
-            HAL_UART_Transmit_IT(&huart1, &rx_byte, 1);
+            const char msg[] = "\r\nUnknown command";
+            HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
         }
-        HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+        clear_cmd_buffer(0);
+        cmd_index = 0;
+        send_prompt = 1;
     }
+    else if(rx_byte == 0x7F || rx_byte == '\b'){ //backspace
+        if(cmd_index > 0){
+            cmd_buffer[--cmd_index] = '\0';
+            HAL_UART_Transmit_IT(&huart1, (uint8_t*)"\b \b", 3);//move cursor back once, overwrite, move back again
+        }
+        else{
+            cmd_index = 0;
+        }
+    }
+    else{
+        if(cmd_index < cmd_buffer_size){
+            cmd_buffer[cmd_index++] = rx_byte;
+        }
+        else{
+            clear_cmd_buffer(0);
+            cmd_index = 0;
+        }
+        HAL_UART_Transmit_IT(&huart1, &rx_byte, 1);
+    }
+    HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
 }
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -190,26 +234,26 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint8_t frame_buffer[12000];
-  for(int i = 0; i < 12000; i++){
-      frame_buffer[i] = 0x0F;
-  }
+
   joystick_direction direction = 0;
   lcd_clear();
   while (1)
   {
-      lcd_draw(frame_buffer);
-      HAL_Delay(1000);
-      lcd_clear();
-      HAL_Delay(1000);
-      joystick_direction direction = joystick_read();
-      printf("direction: %d\r\n", direction);
-      if(button_read(1)){
-          printf("Pressed Button 1\r\n");
+      // vm_draw();
+      // HAL_Delay(1000);
+      // lcd_clear();
+      // HAL_Delay(1000);
+
+      if(run_program_flag){
+          uint16_t word;
+          Instruction instr;
+          if(vm_enable_logs) vm_print_state();
+          while(vm_next_instruction(&word)) {
+              HAL_Delay(5000);
+              vm_run_instructon(&word);
+          }
       }
-      if(button_read(0)){
-          printf("Pressed Button 0\r\n");
-      }
+
 
     /* USER CODE END WHILE */
 
