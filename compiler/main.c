@@ -75,12 +75,17 @@ int main(const int argc, const char* argv[]){
         //line parsing
         while (fgets(line_buffer, sizeof(line_buffer), rf)) {
             LOG_MSG("Parsing line %d:\t%s", line_number, line_buffer);
-            
+            if(strlen(line_buffer) <= 1) continue; // ignoring empty lines (brittle)
             char c = ' ';
             int i = 0; int j = 0;
             int word_count= 1;
             line_number++;
-            Instruction instr = {0};
+            int skip_write = 0;
+            Opcode opcode; 
+            int arg1;
+            int arg2;
+            int type1;
+            int type2;
             if(ferror(rf)){
                 fprintf(stderr, "Error reading from file %s", rfile_name);
             }
@@ -91,11 +96,16 @@ int main(const int argc, const char* argv[]){
                 if(c == ' ' || c == '\n' || c == '\0'){
                     assert((size_t)j < word_buffer_size);
                     word_buffer[j] = '\0';
+                    // Comment
+                    if (word_buffer[0] == ';') {
+                        if(word_count == 1) skip_write = 1;
+                        LOG_MSG("Ignoring comment %s\n", (&line_buffer[i] - strlen(word_buffer)));
+                        break;
+                    }
                     // Check if first word in line -> Opcode
                     if(word_count == 1){ 
                         if(get_opcode(word_buffer, &opcode)){
-                            LOG_MSG("Opcode:\t\t%0*b <-> %s\n", OP_LENGTH, opcode, word_buffer);
-                            instr.opcode = opcode;
+                            LOG_MSG("Opcode:\t\t%01X <-> %s\n", opcode, word_buffer);
                         }
                         else {
                             fprintf(stderr, "[ERROR]: Invalid opcode '%s'\n -> %d| %s", word_buffer, line_number, line_buffer);
@@ -106,15 +116,27 @@ int main(const int argc, const char* argv[]){
                     else if(j > 1 && is_register(word_buffer)){ 
                         LOG_MSG("Argument %d:\t%s (Register)\n", word_count - 1, word_buffer);
                         const int argument_num = word_count - 2;
-                        instr.arg_type[argument_num]= REGISTER;
-                        instr.arg[argument_num] = atoi(&word_buffer[1]);
+                        if(argument_num == 1) { 
+                            type1 = REGISTER;
+                            arg1 = atoi(&word_buffer[1]);
+                        }
+                        else if(argument_num == 2) { 
+                            type2 = REGISTER;
+                            arg2 = atoi(&word_buffer[1]);
+                        }
                     }
                     // Immediate Arguments
                     else{ 
-                        LOG_MSG("Argument %d:\t%s (Immediate)\n", word_count - 1, word_buffer);
-                        const int argument_num = word_count - 2;
-                        instr.arg_type[argument_num]= IMMEDIATE;
-                        instr.arg[argument_num] = atoi(word_buffer);
+                        const int argument_num = word_count - 1;
+                        LOG_MSG("Argument %d:\t%s (Immediate)\n", argument_num, word_buffer);
+                        if(argument_num == 1) { 
+                            type1 = IMMEDIATE;
+                            arg1 = atoi(word_buffer);
+                        }
+                        else if(argument_num == 2) { 
+                            type2 = IMMEDIATE;
+                            arg2 = atoi(word_buffer);
+                        }
                     }
                     j = 0;
                     word_count++;
@@ -124,12 +146,23 @@ int main(const int argc, const char* argv[]){
                 }
                 i++; 
             }
-            LOG_MSG("Words found:\t%d\n", word_count-1);
-            uint16_t instr_word = encode_instruction(&instr);
-            LOG_MSG("Instruction:\t%016b <-> %04X\n",  instr_word, instr_word);
-            fwrite(&instr_word, sizeof(instr_word), 1, wf);
+            if(!skip_write){
+                if(opcode == OP_LBI){
+                    type1 = REGISTER;
+                    type2 = IMMEDIATE;
+                    uint16_t instr_word = ENCODE_INSTR(opcode, type1, arg1, type2, 0);
+                    fwrite(&instr_word, sizeof(instr_word), 1, wf);
+                    fwrite(&arg2, sizeof(uint16_t), 1, wf);
+                    LOG_MSG("Wrote instruction: %04X %04X\n", instr_word, (uint16_t) arg2);
+                }
+                else{
+                    LOG_MSG("Words found:\t%d\n", word_count-1);
+                    uint16_t instr_word = ENCODE_INSTR(opcode, type1, arg1, type2, arg2);
+                    LOG_MSG("Wrote instruction: %04X\n", instr_word);
+                    fwrite(&instr_word, sizeof(instr_word), 1, wf);
+                }
+            }
         }
-
 quit:
         fclose(rf);
         fclose(wf);

@@ -7,7 +7,8 @@
 
 
 uint16_t program[PROGRAM_SIZE_WORDS];
-uint16_t *pc = program;
+uint16_t pc = 0;
+
 uint16_t reg[NUM_REGISTERS];
 uint8_t vm_enable_logs = 0;
 
@@ -19,47 +20,20 @@ void vm_init(){
     }
 }
 
-int vm_next_instruction(uint16_t *instr_buffer){
-    const uint16_t instr = pc[0];
-    if(instr == OP_HALT) return 0;
 
-    *instr_buffer = instr;
-    pc += sizeof(uint16_t);
-    return 1;
-}
-
-void vm_print_state(){
-    printf("Registers:\r\n");
-    for (int i = 0; i < NUM_REGISTERS; i++){
-        printf("R%d: %05d\t", i, reg[i]);
-    }
-    printf("\r\n");
-    printf("\tpc: %d\r\n", pc-program);
-
-
-    printf("Current Instruction:\r\n");
-    Instruction instr = decode_instruction(pc[0]);
-    print_instruction(&instr);
-
-    printf("Next instructions:\r\n");
-
-    for (int i = 0; i < 4; i++){
-        printf("%04X ", pc[i]);
-    }
-    printf("\r\n");
-
-}
 
 //TODO: Error handling
-void vm_run_instructon(uint16_t* word){
+int vm_run_instruction(){
     joystick_direction joystick_direction = joystick_read();
     uint8_t pressed_button0 = button_read(0);
     uint8_t pressed_button1 = button_read(1);   
-    uint8_t opcode = OPCODE(*word);
-    uint8_t arg0 = ARG0_VALUE(*word);
-    uint8_t arg1 = ARG1_VALUE(*word);
-    uint8_t type0 = ARG0_TYPE(*word);
-    uint8_t type1 = ARG1_TYPE(*word);
+    uint16_t instr= program[pc++];
+    uint8_t opcode = OPCODE(instr);
+    uint8_t arg1 = ARG1_VALUE(instr);
+    uint8_t arg2 = ARG2_VALUE(instr);
+    uint8_t type1 = ARG1_TYPE(instr);
+    uint8_t type2 = ARG2_TYPE(instr);
+    
 
     if(vm_enable_logs){
         if(pressed_button0){
@@ -69,37 +43,42 @@ void vm_run_instructon(uint16_t* word){
             printf("Pressed Button 1\r\n");
         }
         printf("direction: %d\r\n", joystick_direction);
-        vm_print_state();
     }
 
-    if(type0 == REGISTER) {
-        arg0 = reg[arg0];
-    }
+    printf("\t%d, %d, %d\r\n", opcode, arg1, arg2);
 
-    if(type1 == REGISTER) {
-        arg1 = reg[arg1];
-    }
-
-    printf("%d, %d\r\n", arg0, arg1);
     switch(opcode){
         case OP_ADD: 
-            reg[0] = arg0 + arg1; 
+            if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
+            if(type2 == REGISTER && arg2 < NUM_REGISTERS) { arg2 = reg[arg2]; }
+            reg[0] = arg1 + arg2; 
             break;
 
         case OP_MLT: 
-            reg[0] = arg0 * arg1; 
+            if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
+            if(type2 == REGISTER && arg2 < NUM_REGISTERS) { arg2 = reg[arg2]; }
+            reg[0] = arg1 * arg2; 
             break;
 
         case OP_MOV: 
-            reg[arg1] = reg[arg0];
+            if(type2 == REGISTER && arg2 < NUM_REGISTERS) { arg2 = reg[arg2]; }
+            if(arg1 < NUM_REGISTERS){
+                reg[arg1] = arg2;
+            }
+            break;
+
+        case OP_LBI:
+            if(arg1 < NUM_REGISTERS){
+                reg[arg1] = program[pc++];
+            }
             break;
 
         case OP_JMP:
-            pc = &program[arg1];
+            pc = arg1;
             break;
 
         case OP_PIX:
-            vm_push_pix(arg0, arg1);
+            vm_push_pix(arg1, arg2);
             break;
 
         case OP_DRAW:
@@ -123,11 +102,14 @@ void vm_run_instructon(uint16_t* word){
             break;
 
         case OP_WAIT:
-            HAL_Delay(arg0);
+            HAL_Delay(arg1);
+            break;
+        case OP_HALT:
+            return 0;
             break;
     }
+    return 1;
 }
-
 
 void vm_draw(){
     for(int i = 0; i < 12000; i++){

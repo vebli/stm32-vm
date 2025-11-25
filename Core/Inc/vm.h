@@ -8,8 +8,8 @@
 
 extern uint8_t vm_enable_logs; 
 extern uint16_t program[PROGRAM_SIZE_WORDS];
-// extern uint16_t reg[NUM_REGISTERS];
-// extern uint16_t pc[NUM_REGISTERS];
+extern uint16_t pc;
+extern uint16_t reg[NUM_REGISTERS];
 
 typedef struct {
     uint8_t x;
@@ -18,11 +18,7 @@ typedef struct {
 
 void vm_init();
 
-void vm_print_state();
-
-int vm_next_instruction(uint16_t *instr_buffer);
-
-void vm_run_instructon(uint16_t* word);
+int vm_run_instruction();
 // void vm_run_program();
 
 void vm_run_repl(void);

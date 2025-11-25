@@ -64,6 +64,9 @@ const char prompt[]="\r\nSHELL > ";
 int cmd_index = 0;
 uint8_t send_prompt = 0;
 int run_program_flag = 0;
+int print_reg_flag = 0;
+int step_flag = 0;
+int print_program_flag = 0;
 
 
 /* USER CODE END PV */
@@ -88,17 +91,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
             HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg1, strlen(msg1));
             run_program_flag = 1;
         }
-        if(strcmp(cmd_buffer, "state") == 0 && !run_program_flag){
-            vm_print_state();
+        else if(strcmp(cmd_buffer, "reg") == 0 ){
+            print_reg_flag = 1;
         }
-        if(strcmp(cmd_buffer, "step") == 0 && !run_program_flag){
-            vm_print_state();
-            uint16_t word;
-            vm_next_instruction(&word);
-            vm_run_instructon(&word);
+        else if(strcmp(cmd_buffer, "step") == 0){
+            step_flag = 1;
         }
-        if (strcmp(cmd_buffer, "load") == 0) {
-            printf("Send program size (max %d):\r\n", PROGRAM_SIZE_BYTES);
+        else if(strcmp(cmd_buffer, "instr") == 0){
+            print_program_flag = 1;
+        }
+        else if (strcmp(cmd_buffer, "load") == 0) {
+            printf("\tSend program size (max %d):\r\n", PROGRAM_SIZE_BYTES);
 
             // temporarily stop receiving interrupts
             HAL_UART_AbortReceive(&huart1);
@@ -130,12 +133,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
             cmd_index = 0;
             send_prompt = 1;
             return; // avoid falling into the rest of the shell logic
-        }
-
-        else if(strcmp(cmd_buffer, "repl") == 0){
-            const char msg[] = "\r\nStarting Repl...";
-            HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
-            // run_repl();
         }
         else if(strcmp(cmd_buffer, "log") == 0){
             const char* msg = (vm_enable_logs) ? "\r\nDisabling Logs" : "\r\nEnabling Logs";
@@ -235,7 +232,6 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  joystick_direction direction = 0;
   lcd_clear();
   while (1)
   {
@@ -243,14 +239,36 @@ int main(void)
       // HAL_Delay(1000);
       // lcd_clear();
       // HAL_Delay(1000);
+      
 
       if(run_program_flag){
-          uint16_t word;
-          Instruction instr;
-          if(vm_enable_logs) vm_print_state();
-          while(vm_next_instruction(&word)) {
-              HAL_Delay(5000);
-              vm_run_instructon(&word);
+          while(vm_run_instruction()){}
+      }
+      else{
+          if(print_reg_flag) {
+              printf("\t");
+              for (int i = 0; i < NUM_REGISTERS; i++){
+                  printf("R%d: %05d\t", i, reg[i]);
+              }
+              printf("\r\n");
+              print_reg_flag = 0;
+          }
+          if(step_flag) {
+              vm_run_instruction();
+              step_flag = 0;
+          }
+          if(print_program_flag){
+              uint16_t word; 
+              int i = 0;
+              printf("\t");
+              do{
+                  word = program[pc + i];
+                  printf("%04X ", word);
+                  i++;
+              } while(word != OP_HALT && i < 16);
+              printf("\r\n");
+
+              print_program_flag = 0;
           }
       }
 
