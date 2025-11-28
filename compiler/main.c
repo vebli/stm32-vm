@@ -114,8 +114,8 @@ int main(const int argc, const char* argv[]){
                     }
                     // Register Arguments
                     else if(j > 1 && is_register(word_buffer)){ 
-                        LOG_MSG("Argument %d:\t%s (Register)\n", word_count - 1, word_buffer);
-                        const int argument_num = word_count - 2;
+                        const int argument_num = word_count - 1;
+                        LOG_MSG("Argument %d:\t%s (Register)\n", argument_num, word_buffer);
                         if(argument_num == 1) { 
                             type1 = REGISTER;
                             arg1 = atoi(&word_buffer[1]);
@@ -153,12 +153,12 @@ int main(const int argc, const char* argv[]){
                     uint16_t instr_word = ENCODE_INSTR(opcode, type1, arg1, type2, 0);
                     fwrite(&instr_word, sizeof(instr_word), 1, wf);
                     fwrite(&arg2, sizeof(uint16_t), 1, wf);
-                    LOG_MSG("Wrote instruction: %04X %04X\n", instr_word, (uint16_t) arg2);
+                    LOG_MSG("Wrote instruction: %04X %04X <-> %016b %016b\n ", instr_word, (uint16_t) arg2, instr_word, (uint16_t) arg2);
                 }
                 else{
                     LOG_MSG("Words found:\t%d\n", word_count-1);
                     uint16_t instr_word = ENCODE_INSTR(opcode, type1, arg1, type2, arg2);
-                    LOG_MSG("Wrote instruction: %04X\n", instr_word);
+                    LOG_MSG("Wrote instruction: %04X <-> %016b\n", instr_word, instr_word);
                     fwrite(&instr_word, sizeof(instr_word), 1, wf);
                 }
             }

@@ -23,14 +23,15 @@
     X(SUB)\
     X(MLT)\
     X(JMP)\
+    X(JZ)\
     X(MOV)\
     X(LBI)\
     X(BTN)\
     X(PIX)\
+    X(RECT)\
+    X(LINE)\
     X(CLS)\
     X(DRAW)\
-    X(BTN0)\
-    X(BTN1)\
     X(JOY)\
     X(WAIT)\
     X(HALT)\

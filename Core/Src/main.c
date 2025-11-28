@@ -62,11 +62,6 @@ help\r\n\
 ";
 const char prompt[]="\r\nSHELL > ";
 int cmd_index = 0;
-uint8_t send_prompt = 0;
-int run_program_flag = 0;
-int print_reg_flag = 0;
-int step_flag = 0;
-int print_program_flag = 0;
 
 
 /* USER CODE END PV */
@@ -87,52 +82,22 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
     if(rx_byte == '\n' || rx_byte == '\r'){ //on enter terminals may send \r, \n, \r\n
         cmd_buffer[cmd_index] = '\0';
         if(strcmp(cmd_buffer, "run") == 0){
-            const char msg1[] = "\r\nStarting program ...";
-            HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg1, strlen(msg1));
-            run_program_flag = 1;
+            vm_flags.run_program = 1;
         }
         else if(strcmp(cmd_buffer, "reg") == 0 ){
-            print_reg_flag = 1;
+            vm_flags.print_reg = 1;
         }
         else if(strcmp(cmd_buffer, "step") == 0){
-            step_flag = 1;
+            vm_flags.step = 1;
         }
         else if(strcmp(cmd_buffer, "instr") == 0){
-            print_program_flag = 1;
+            vm_flags.print_program = 1;
+        }
+        else if(strcmp(cmd_buffer, "stack") == 0){
+            vm_flags.print_stack = 1;
         }
         else if (strcmp(cmd_buffer, "load") == 0) {
-            printf("\tSend program size (max %d):\r\n", PROGRAM_SIZE_BYTES);
-
-            // temporarily stop receiving interrupts
-            HAL_UART_AbortReceive(&huart1);
-
-            uint16_t size = 0;
-
-            // receive 2-byte size (little endian)
-            uint8_t size_buf[2];
-            HAL_UART_Receive(&huart1, size_buf, 2, HAL_MAX_DELAY);
-            size = size_buf[0] | (size_buf[1] << 8);
-
-            while (size > PROGRAM_SIZE_BYTES) {
-                printf("Program size %u too large. Send again:\r\n", size);
-                HAL_UART_Receive(&huart1, size_buf, 2, HAL_MAX_DELAY);
-                size = size_buf[0] | (size_buf[1] << 8);
-            }
-
-            printf("Waiting for %u bytes...\r\n", size);
-
-            // receive program bytes
-            HAL_UART_Receive(&huart1, (uint8_t *)program, size, HAL_MAX_DELAY);
-
-            printf("Program loaded!\r\n");
-
-            // resume shell input
-            HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
-
-            clear_cmd_buffer(0);
-            cmd_index = 0;
-            send_prompt = 1;
-            return; // avoid falling into the rest of the shell logic
+            vm_flags.load = 1;
         }
         else if(strcmp(cmd_buffer, "log") == 0){
             const char* msg = (vm_enable_logs) ? "\r\nDisabling Logs" : "\r\nEnabling Logs";
@@ -148,7 +113,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
         }
         clear_cmd_buffer(0);
         cmd_index = 0;
-        send_prompt = 1;
+        vm_flags.print_prompt = 1;
     }
     else if(rx_byte == 0x7F || rx_byte == '\b'){ //backspace
         if(cmd_index > 0){
@@ -174,8 +139,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1) {
-        if (send_prompt) {
-            send_prompt = 0;
+        if (vm_flags.print_prompt) {
+            vm_flags.print_prompt= 0;
             HAL_UART_Transmit_IT(&huart1, (uint8_t*)prompt, strlen(prompt));
         }
     }
@@ -204,7 +169,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-      vm_init();
+  vm_init();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -232,32 +197,74 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  lcd_clear();
   while (1)
   {
-      // vm_draw();
-      // HAL_Delay(1000);
-      // lcd_clear();
-      // HAL_Delay(1000);
-      
-
-      if(run_program_flag){
+      if(vm_flags.run_program){
+          printf("\tRunning program...\r\n");
           while(vm_run_instruction()){}
+          printf("Done\r\n");
+          vm_flags.run_program = 0;
+          pc = 0;
       }
+
       else{
-          if(print_reg_flag) {
+          if(vm_flags.load){
+            printf("\tSend program size (max %d):\r\n", PROGRAM_SIZE_BYTES);
+
+            HAL_UART_AbortReceive(&huart1);
+
+            uint16_t size = 0;
+
+            // receive 2-byte size (little endian)
+            uint8_t size_buf[2];
+
+            HAL_UART_Receive(&huart1, size_buf, 2, HAL_MAX_DELAY);
+
+            size = size_buf[0] | (size_buf[1] << 8);
+
+            while (size > PROGRAM_SIZE_BYTES) {
+                printf("Program size %u too large. Send again:\r\n", size);
+                HAL_UART_Receive(&huart1, size_buf, 2, HAL_MAX_DELAY);
+                size = size_buf[0] | (size_buf[1] << 8);
+            }
+
+            printf("Waiting for %u bytes...\r\n", size);
+            HAL_UART_Receive(&huart1, (uint8_t *)program, size, HAL_MAX_DELAY);
+            printf("Program loaded!\r\n");
+
+            HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+
+            clear_cmd_buffer(0);
+            cmd_index = 0;
+            vm_flags.print_prompt = 1;
+            vm_flags.load = 0;
+            pc = 0;
+          }
+
+          if(vm_flags.print_reg) {
               printf("\t");
               for (int i = 0; i < NUM_REGISTERS; i++){
                   printf("R%d: %05d\t", i, reg[i]);
               }
               printf("\r\n");
-              print_reg_flag = 0;
+              vm_flags.print_reg = 0;
           }
-          if(step_flag) {
+
+          if(vm_flags.step) {
               vm_run_instruction();
-              step_flag = 0;
+              vm_flags.step = 0;
           }
-          if(print_program_flag){
+
+          if(vm_flags.print_stack) {
+              printf("\ttop | ");
+              for(int i = 0; i < pix_sp; i++){
+                  printf("(%d,%d) ", pix_stack[i].x, pix_stack[i].y);
+              }
+              printf(" | bottom\r\n");
+              vm_flags.print_stack = 0;
+          }
+
+          if(vm_flags.print_program){
               uint16_t word; 
               int i = 0;
               printf("\t");
@@ -267,8 +274,7 @@ int main(void)
                   i++;
               } while(word != OP_HALT && i < 16);
               printf("\r\n");
-
-              print_program_flag = 0;
+              vm_flags.print_program = 0;
           }
       }
 
