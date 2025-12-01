@@ -11,7 +11,7 @@
 uint16_t program[PROGRAM_SIZE_WORDS];
 uint16_t pc = 0;
 
-uint16_t reg[NUM_REGISTERS];
+int32_t reg[NUM_REGISTERS];
 uint8_t vm_enable_logs = 0;
 
 uint8_t frame_buffer[LCD_FRAME_BUFFER_SIZE];
@@ -64,6 +64,12 @@ int vm_run_instruction(){
             reg[0] = arg1 + arg2; 
             break;
 
+        case OP_SUB: 
+            if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
+            if(type2 == REGISTER && arg2 < NUM_REGISTERS) { arg2 = reg[arg2]; }
+            reg[0] = arg1 - arg2; 
+            break;
+
         case OP_MLT: 
             if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
             if(type2 == REGISTER && arg2 < NUM_REGISTERS) { arg2 = reg[arg2]; }
@@ -87,6 +93,12 @@ int vm_run_instruction(){
             pc = arg1;
             break;
 
+        case OP_JZ:
+            if(reg[0] == 0){
+                pc = arg1;
+            }
+            break;
+
         case OP_PIX:
             if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
             if(type2 == REGISTER && arg2 < NUM_REGISTERS) { arg2 = reg[arg2]; }
@@ -107,16 +119,17 @@ int vm_run_instruction(){
 
         case OP_BTN:
             if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
-            if(arg2 < 2)
-            reg[arg1] = button_read(arg2);
+            if(arg2 < 2) reg[arg1] = button_read(arg2);
             break;
 
         case OP_JOY:
-            if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
             reg[arg1] = joystick_read();
             break;
 
         case OP_CLS:
+            for(int i = 0; i < LCD_FRAME_BUFFER_SIZE; i++ ){
+                frame_buffer[i] = 0xFF;
+            }
             lcd_clear();
             break;
 

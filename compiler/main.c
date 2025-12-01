@@ -25,7 +25,6 @@ int is_register(const char *str){
     return (str[0] == 'R' && atoi(&str[1]) < NUM_REGISTERS) ? 1 : 0;
 }
 
-
 int main(const int argc, const char* argv[]){
     program_name = argv[0];
     if(argc == 1){ 

@@ -8,7 +8,7 @@ const OpcodeEntry opcode_table[] = {
 #undef X
 };
 
-int get_opcode(const char* name, unsigned int *opcode_ptr){
+int get_opcode(const char* name, Opcode *opcode_ptr){
     for(int i = 0; i < NUM_OPCODES; i++){
         if(strcmp(opcode_table[i].name, name) == 0){
             *opcode_ptr = opcode_table[i].opcode;

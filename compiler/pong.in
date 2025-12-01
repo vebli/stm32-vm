@@ -1,0 +1,46 @@
+; constants
+LBI R1 60 ; paddle X
+LBI R2 200 ; paddle Y
+LBI R4 50 ; paddle width
+LBI R5 6 ; paddle height
+
+loop:
+    JOY R3 ; joystick 
+
+    ; move right if input == 3 
+    MOV R6 R3   
+    SUB R6 3        
+    JZ right
+
+    ; move left if input == 7 
+    MOV R6 R3
+    SUB R6 7
+    JZ left
+
+    JMP draw
+
+right:
+    ADD R1 10
+    MOV R1 R0
+    JMP draw
+
+left:
+    SUB R1 10
+    MOV R1 R0
+
+draw:
+    CLS
+    PIX R1 R2
+
+    ; push bottom-right: (R1 + width, R2 + height)
+    ADD R1 R4 
+    MOV R7 R0 
+    PIX R7 R2
+
+    LINE
+    DRAW
+    WAIT 20
+
+    JMP loop
+
+HALT

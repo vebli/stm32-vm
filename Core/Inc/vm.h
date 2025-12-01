@@ -9,7 +9,7 @@
 extern uint8_t vm_enable_logs; 
 extern uint16_t program[PROGRAM_SIZE_WORDS];
 extern uint16_t pc;
-extern uint16_t reg[NUM_REGISTERS];
+extern int32_t reg[NUM_REGISTERS];
 
 typedef struct {
     unsigned int run_program : 1;

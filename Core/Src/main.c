@@ -55,11 +55,6 @@
 uint8_t rx_byte;
 const int cmd_buffer_size = 16;
 char cmd_buffer[16];
-const char help_msg[] = "Commands:\r\n\
-run\r\n\
-repl\r\n\
-help\r\n\
-";
 const char prompt[]="\r\nSHELL > ";
 int cmd_index = 0;
 
@@ -105,6 +100,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
             vm_enable_logs ^= 1;
         }
         else if(strcmp(cmd_buffer, "help") == 0){
+            const char help_msg[] = "Commands:\r\n\
+                                     run\r\n\
+                                     step\r\n\
+                                     run\r\n\
+                                     instr\r\n\
+                                     stack\r\n\
+                                     log\r\n\
+                                     load\r\n\
+                                     help\r\n\
+                                     ";
             HAL_UART_Transmit_IT(&huart1, (uint8_t*)help_msg, strlen(help_msg));
         }
         else{
@@ -238,6 +243,7 @@ int main(void)
             cmd_index = 0;
             vm_flags.print_prompt = 1;
             vm_flags.load = 0;
+            vm_init();
             pc = 0;
           }
 
