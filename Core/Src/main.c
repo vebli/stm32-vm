@@ -248,9 +248,13 @@ int main(void)
           }
 
           if(vm_flags.print_reg) {
-              printf("\t");
-              for (int i = 0; i < NUM_REGISTERS; i++){
-                  printf("R%d: %05d\t", i, reg[i]);
+              printf("\r\n");
+              for (int i = 0; i < 8; i++){
+                  printf("R%02d: %05d\t", i, reg[i]);
+              }
+              printf("\r\n");
+              for (int i = 8; i < NUM_REGISTERS; i++){
+                  printf("R%02d: %05d\t", i, reg[i]);
               }
               printf("\r\n");
               vm_flags.print_reg = 0;

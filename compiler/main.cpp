@@ -107,7 +107,7 @@ int main(const int argc, const char* argv[]){
 
             if(line.empty())  continue;
 
-            std::stringstream ss(lines[i]);
+            std::stringstream ss(line);
             std::string word;
             ss >> word;
 
@@ -126,6 +126,8 @@ int main(const int argc, const char* argv[]){
             if(get_opcode(word.c_str(), &opcode)){
                 switch (opcode){
                     case OP_LBI:
+                    case OP_JMP:
+                    case OP_JZ:
                         pc+=2;
                         break;
                     default: 
@@ -204,6 +206,15 @@ int main(const int argc, const char* argv[]){
             const uint16_t big_imm = instr.val[1];
             out.write((const char *) &big_imm, sizeof(big_imm));
         }
+
+        else if (instr.opcode == OP_JZ || instr.opcode == OP_JMP){
+            const uint16_t instr_enc =  ENCODE_INSTR(instr.opcode, (uint8_t) IMMEDIATE, (uint8_t) 0, (uint8_t) IMMEDIATE, 0);
+            out.write((const char *) &instr_enc, sizeof(instr_enc));
+
+            const uint16_t big_imm = instr.val[0];
+            out.write((const char *) &big_imm, sizeof(big_imm));
+        }
+
         else{
             const uint16_t instr_enc =  ENCODE_INSTR(instr.opcode, (uint8_t) instr.type[0], (uint8_t) instr.val[0], (uint8_t) instr.type[1], (uint8_t) instr.val[1]);
             out.write((const char *) &instr_enc, sizeof(instr_enc));

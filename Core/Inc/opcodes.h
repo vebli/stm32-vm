@@ -49,7 +49,7 @@ typedef enum {
 #define OP_HEX_LENGTH 1
 #define OP_BIT_LENGTH OP_HEX_LENGTH * 4
 #define OPERAND_LENGTH 5
-#define NUM_REGISTERS 8
+#define NUM_REGISTERS 16
 #define MAX_NUM_ARGUMENTS 2
 #define INSTRUCTION_LENGTH 16
 

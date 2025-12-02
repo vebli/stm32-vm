@@ -11,7 +11,7 @@
 uint16_t program[PROGRAM_SIZE_WORDS];
 uint16_t pc = 0;
 
-int32_t reg[NUM_REGISTERS];
+uint32_t reg[NUM_REGISTERS];
 uint8_t vm_enable_logs = 0;
 
 uint8_t frame_buffer[LCD_FRAME_BUFFER_SIZE];
@@ -53,9 +53,9 @@ int vm_run_instruction(){
             printf("Pressed Button 1\r\n");
         }
         printf("direction: %d\r\n", joystick_direction);
+        printf("\t%d, %d, %d\r\n", opcode, arg1, arg2);
     }
 
-    printf("\t%d, %d, %d\r\n", opcode, arg1, arg2);
 
     switch(opcode){
         case OP_ADD: 
@@ -90,10 +90,12 @@ int vm_run_instruction(){
             break;
 
         case OP_JMP:
+            arg1 = program[pc++];
             pc = arg1;
             break;
 
         case OP_JZ:
+            arg1 = program[pc++];
             if(reg[0] == 0){
                 pc = arg1;
             }
