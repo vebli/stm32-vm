@@ -28,9 +28,7 @@
 #include "vm.h"
 #include "printf_uart.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include "hardware.h"
 
 /* USER CODE END Includes */
 
@@ -55,7 +53,6 @@
 uint8_t rx_byte;
 const int cmd_buffer_size = 16;
 char cmd_buffer[16];
-const char prompt[]="\r\nSHELL > ";
 int cmd_index = 0;
 
 
@@ -65,17 +62,14 @@ int cmd_index = 0;
 void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 /* USER CODE BEGIN PFP */
-void clear_cmd_buffer(int from){
-      for(int i = from; i < cmd_buffer_size; i++){
-          cmd_buffer[i] = '\0';
-      }
-}
 
+// Runs for every byte that is received over uart
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
     if(huart->Instance != USART1) return; 
 
-    if(rx_byte == '\n' || rx_byte == '\r'){ //on enter terminals may send \r, \n, \r\n
+    if(rx_byte == '\n' || rx_byte == '\r'){ //Terminals send \r, \n or \r\n when hitting enter
         cmd_buffer[cmd_index] = '\0';
+        // Setting flags instead of running functions directly to keep interrupts responsive
         if(strcmp(cmd_buffer, "run") == 0){
             vm_flags.run_program = 1;
         }
@@ -95,35 +89,23 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
             vm_flags.load = 1;
         }
         else if(strcmp(cmd_buffer, "log") == 0){
-            const char* msg = (vm_enable_logs) ? "\r\nDisabling Logs" : "\r\nEnabling Logs";
+            const char* msg = (vm_enable_logs) ? "\r\nDisabling Logs" : "\r\nEnabling Logs\r\n";
             HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
             vm_enable_logs ^= 1;
         }
         else if(strcmp(cmd_buffer, "help") == 0){
-            const char help_msg[] = "Commands:\r\n\
-                                     run\r\n\
-                                     step\r\n\
-                                     run\r\n\
-                                     instr\r\n\
-                                     stack\r\n\
-                                     log\r\n\
-                                     load\r\n\
-                                     help\r\n\
-                                     ";
-            HAL_UART_Transmit_IT(&huart1, (uint8_t*)help_msg, strlen(help_msg));
+            vm_flags.print_help= 1;
         }
         else{
-            const char msg[] = "\r\nUnknown command";
-            HAL_UART_Transmit_IT(&huart1, (uint8_t*)msg, strlen(msg));
+            vm_flags.print_unknown = 1;
         }
-        clear_cmd_buffer(0);
+        memset(cmd_buffer, 0, cmd_buffer_size);
         cmd_index = 0;
-        vm_flags.print_prompt = 1;
     }
     else if(rx_byte == 0x7F || rx_byte == '\b'){ //backspace
         if(cmd_index > 0){
             cmd_buffer[--cmd_index] = '\0';
-            HAL_UART_Transmit_IT(&huart1, (uint8_t*)"\b \b", 3);//move cursor back once, overwrite, move back again
+            HAL_UART_Transmit(&huart1, (uint8_t*)"\b \b", 3, HAL_MAX_DELAY);//move cursor back once, overwrite, move back again
         }
         else{
             cmd_index = 0;
@@ -134,22 +116,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
             cmd_buffer[cmd_index++] = rx_byte;
         }
         else{
-            clear_cmd_buffer(0);
+            memset(cmd_buffer, 0, cmd_buffer_size);
             cmd_index = 0;
         }
-        HAL_UART_Transmit_IT(&huart1, &rx_byte, 1);
+        HAL_UART_Transmit(&huart1, &rx_byte, 1, HAL_MAX_DELAY);
     }
     HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
 }
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART1) {
-        if (vm_flags.print_prompt) {
-            vm_flags.print_prompt= 0;
-            HAL_UART_Transmit_IT(&huart1, (uint8_t*)prompt, strlen(prompt));
-        }
-    }
-}
+// void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {}
+//
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -195,7 +170,6 @@ int main(void)
   MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
-  HAL_UART_Transmit_IT(&huart1, prompt, strlen(prompt));
 
   /* USER CODE END 2 */
 
@@ -239,9 +213,8 @@ int main(void)
 
             HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
 
-            clear_cmd_buffer(0);
+            memset(cmd_buffer, 0, cmd_buffer_size);
             cmd_index = 0;
-            vm_flags.print_prompt = 1;
             vm_flags.load = 0;
             vm_init();
             pc = 0;
@@ -277,14 +250,20 @@ int main(void)
           if(vm_flags.print_program){
               uint16_t word; 
               int i = 0;
-              printf("\t");
               do{
                   word = program[pc + i];
                   printf("%04X ", word);
                   i++;
               } while(word != OP_HALT && i < 16);
-              printf("\r\n");
               vm_flags.print_program = 0;
+          }
+          if(vm_flags.print_help) {
+              printf( "\r\nCommands:\r\n run\r\n step\r\n run\r\n instr\r\n stack\r\n log\r\n load\r\n help\r\n");
+              vm_flags.print_help = 0;
+          }
+          if(vm_flags.print_unknown){
+              printf("\r\nUnknown Command\r\n");
+              vm_flags.print_unknown = 0;
           }
       }
 

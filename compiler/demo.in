@@ -1,0 +1,139 @@
+; ----- CONSTANTS -----
+LBI R1 200; X
+LBI R2 120; Y 
+LBI R3 0  ; Color
+; ---------------------
+
+loop:
+
+; ----- JOYSTICK -----
+    JOY R4
+
+    MOV R6 R4
+    SUB R6 1
+    JZ move_N
+
+    MOV R6 R4
+    SUB R6 2
+    JZ move_NW
+
+    MOV R6 R4
+    SUB R6 3
+    JZ move_W 
+
+    MOV R6 R4
+    SUB R6 4
+    JZ move_SW
+
+    MOV R6 R4
+    SUB R6 5
+    JZ move_S
+
+    MOV R6 R4
+    SUB R6 6
+    JZ move_SE
+
+    MOV R6 R4
+    SUB R6 7
+    JZ move_E
+
+    MOV R6 R4
+    SUB R6 8
+    JZ move_NE
+
+        
+    JMP draw
+
+; ----- MOVEMENT -----
+move_N:
+    SUB R2 1
+    MOV R2 R0
+    JMP button0
+
+move_NW:
+    SUB R1 1
+    MOV R1 R0
+    SUB R2 1
+    MOV R2 R0
+    JMP button0
+
+move_W:
+    SUB R1 1
+    MOV R1 R0
+    JMP button0
+
+move_SW:
+    SUB R1 1
+    MOV R1 R0
+    ADD R2 1
+    MOV R2 R0
+    JMP button0
+
+move_S:
+    ADD R2 1
+    MOV R2 R0
+    JMP button0
+
+move_SE:
+    ADD R1 1
+    MOV R1 R0
+    ADD R2 1
+    MOV R2 R0
+    JMP button0
+
+move_E:
+    ADD R1 1
+    MOV R1 R0
+    JMP button0
+
+move_NE:
+    ADD R1 1
+    MOV R1 R0
+    SUB R2 1
+    MOV R2 R0
+    JMP button0
+
+JMP button0
+
+; ---- buttons ----- 
+button0:
+    BTN R5 1
+    SUB R5 1
+    JZ change_color
+
+JMP button1
+
+change_color:
+    MOV R5 R3
+    SUB R5 1
+    JZ change_black
+    MOV R3 1
+
+JMP button1
+
+change_black:
+    MOV R3 0
+
+button1:
+    BTN R5 0
+    SUB R5 1
+    JZ clear
+    
+JMP draw
+
+clear:
+    CLS
+    JMP draw
+
+draw:
+    PIX R1 R2
+    ADD R2 3
+    PIX R1 R0
+    LINE R3
+    DRAW
+
+    WAIT 10
+
+    JMP loop
+
+HALT

@@ -17,7 +17,8 @@ typedef struct {
     unsigned int step : 1;
     unsigned int print_program : 1;
     unsigned int print_stack : 1;
-    unsigned int print_prompt : 1;
+    unsigned int print_help: 1;
+    unsigned int print_unknown: 1;
     unsigned int load : 1;
 }vm_flags_t ;
 
@@ -33,14 +34,14 @@ extern pixel pix_stack[PIX_STACK_MAX];
 extern int pix_sp;
 
 
-void vm_init();
+void vm_init(void);
 
-int vm_run_instruction();
+int vm_run_instruction(void);
 // void vm_run_program();
 
 void vm_run_repl(void);
 void vm_draw(void);
-void vm_draw_line(void);
+void vm_draw_line(uint8_t color);
 void vm_draw_rect(void);
 
 pixel vm_push_pix(uint16_t x, uint16_t y);

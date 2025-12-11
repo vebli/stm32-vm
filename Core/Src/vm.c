@@ -22,7 +22,7 @@ vm_flags_t vm_flags = {0};
 pixel pix_stack[PIX_STACK_MAX];
 int pix_sp = 0;
 
-void vm_init(){
+void vm_init(void){
     lcd_clear();
     for(int i = 0; i < LCD_FRAME_BUFFER_SIZE; i++){
         frame_buffer[i] = 0xFF;
@@ -32,20 +32,20 @@ void vm_init(){
     }
 }
 
-//TODO: Error handling
-int vm_run_instruction(){
-    joystick_direction joystick_direction = joystick_read();
-    uint8_t pressed_button0 = button_read(0);
-    uint8_t pressed_button1 = button_read(1);   
+int vm_run_instruction(void){
+
     uint16_t instr= program[pc++];
     uint8_t opcode = OPCODE(instr);
-    int arg1 = ARG1_VALUE(instr);
-    int arg2 = ARG2_VALUE(instr);
+    uint32_t arg1 = ARG1_VALUE(instr);
+    uint32_t arg2 = ARG2_VALUE(instr);
     uint8_t type1 = ARG1_TYPE(instr);
     uint8_t type2 = ARG2_TYPE(instr);
     
 
     if(vm_enable_logs){
+        joystick_direction joystick_direction = joystick_read();
+        uint8_t pressed_button0 = button_read(0);
+        uint8_t pressed_button1 = button_read(1);   
         if(pressed_button0){
             printf("Pressed Button 0\r\n");
         }
@@ -116,32 +116,43 @@ int vm_run_instruction(){
             break;
 
         case OP_LINE:
-            vm_draw_line();
+            if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
+            uint8_t color = (arg1 == 0) ? 0 : 1;
+            vm_draw_line(color);
             break;
 
         case OP_BTN:
-            if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
-            if(arg2 < 2) reg[arg1] = button_read(arg2);
+            if(type2 == REGISTER && arg2 < NUM_REGISTERS) { arg2 = reg[arg2]; }
+            if(type1 == REGISTER && arg1 < NUM_REGISTERS && arg2 < 2) {
+                reg[arg1] = button_read(arg2);
+            }
             break;
 
         case OP_JOY:
-            reg[arg1] = joystick_read();
+            if(arg1 < NUM_REGISTERS){
+                reg[arg1] = joystick_read();
+            }
             break;
 
         case OP_CLS:
             for(int i = 0; i < LCD_FRAME_BUFFER_SIZE; i++ ){
                 frame_buffer[i] = 0xFF;
             }
-            lcd_clear();
+            vm_draw();
             break;
 
         case OP_WAIT:
             if(type1 == REGISTER && arg1 < NUM_REGISTERS) { arg1 = reg[arg1]; }
-            HAL_Delay(arg1);
+            HAL_Delay(arg1 > 1000 ? 1000 : arg1);
             break;
+
         case OP_HALT:
             return 0;
             break;
+
+        default:
+            printf("Unknown opcode: %u at PC=%u\n", opcode, pc-1);
+            return 0;
     }
     return 1;
 }
@@ -162,7 +173,7 @@ void vm_draw_pixel(uint16_t x, uint16_t y, uint8_t color){
     }
 }
 
-void vm_draw_line(void){
+void vm_draw_line(uint8_t color){
     if (pix_sp < 2) return;        
     pixel p2 = vm_pop_pix();   
     pixel p1 = vm_pop_pix();    
@@ -171,8 +182,8 @@ void vm_draw_line(void){
     int dy = -abs(p2.y - p1.y), sy = p1.y < p2.y ? 1 : -1;
     int err = dx + dy, e2;
     
-    for(;;) {
-        vm_draw_pixel(p1.x, p1.y, 0);  
+    while(1) {
+        vm_draw_pixel(p1.x, p1.y, color);  
         if (p1.x == p2.x && p1.y == p2.y) break;
         e2 = 2 * err;
         if (e2 >= dy) { err += dy; p1.x += sx; }
@@ -210,8 +221,6 @@ void vm_draw_rect(void){
     }
 
 }
-// void vm_run_repl(uint16_t *pc){
-// }
 
 pixel vm_push_pix(uint16_t x, uint16_t y){
     if(pix_sp < PIX_STACK_MAX){

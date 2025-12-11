@@ -82,14 +82,16 @@ joystick_direction joystick_read(void){
    int horizontal = 0; 
    int vertical   = 0;
    if(joy_x > ADC_CENTER + DEADZONE)
-       horizontal = 1;       
+       horizontal = -1;       
    else if(joy_x < ADC_CENTER - DEADZONE)
-       horizontal = -1;     
+       horizontal = 1;     
 
    if(joy_y > ADC_CENTER + DEADZONE)
-       vertical = 1;       
+       vertical = -1;       
    else if(joy_y < ADC_CENTER - DEADZONE)
-       vertical = -1;     
+       vertical = 1;     
+
+   // printf("h: %d\tv: %d\r\n", horizontal, vertical);
 
    if(vertical == 0 && horizontal == 0) return Z;
    if(vertical == 1 && horizontal == 0)  return N;
@@ -102,11 +104,22 @@ joystick_direction joystick_read(void){
    if(vertical == 1 && horizontal == -1) return NW;
 }
 
-int button_read(uint8_t num){
-    if(num == 0){
-        return HAL_GPIO_ReadPin(button_1_GPIO_Port, button_1_Pin);
+int button_read(uint8_t num)
+{
+    uint8_t raw;
+
+    if (num == 0) raw = HAL_GPIO_ReadPin(button_1_GPIO_Port, button_1_Pin);
+    else raw = HAL_GPIO_ReadPin(button_2_GPIO_Port, button_2_Pin);
+
+    static uint8_t last_state[2] = {1, 1};   
+
+    uint8_t idx = (num == 0 ? 0 : 1);
+
+    if (last_state[idx] == 1 && raw == 0) {
+        last_state[idx] = raw;   
+        return 1;               
     }
-    else{
-        return HAL_GPIO_ReadPin(button_2_GPIO_Port, button_2_Pin);
-    }
+
+    last_state[idx] = raw;
+    return 0;                  
 }
