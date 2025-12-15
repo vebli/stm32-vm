@@ -1,12 +1,18 @@
+; ----- Program description -----
+; Move cursor with joystick 
+; Press button 0 to toggle drawing color (black/white)
+; Press button 1 to clear the screen
+;
 ; ----- CONSTANTS -----
 LBI R1 200; X
 LBI R2 120; Y 
-LBI R3 0  ; Color
+LBI R3 1  ; Color
 ; ---------------------
 
 loop:
 
 ; ----- JOYSTICK -----
+
     JOY R4
 
     MOV R6 R4
@@ -42,7 +48,7 @@ loop:
     JZ move_NE
 
         
-    JMP draw
+    JMP button0
 
 ; ----- MOVEMENT -----
 move_N:
@@ -93,23 +99,20 @@ move_NE:
     MOV R2 R0
     JMP button0
 
-JMP button0
+; ---- BUTTONS ----- 
 
-; ---- buttons ----- 
 button0:
     BTN R5 1
     SUB R5 1
     JZ change_color
-
-JMP button1
+    JMP button1
 
 change_color:
     MOV R5 R3
     SUB R5 1
     JZ change_black
     MOV R3 1
-
-JMP button1
+    JMP button1
 
 change_black:
     MOV R3 0
@@ -118,12 +121,13 @@ button1:
     BTN R5 0
     SUB R5 1
     JZ clear
-    
-JMP draw
+    JMP draw
 
 clear:
     CLS
     JMP draw
+
+; ----- DRAWING -----
 
 draw:
     PIX R1 R2

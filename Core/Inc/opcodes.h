@@ -53,12 +53,6 @@ typedef enum {
 #define MAX_NUM_ARGUMENTS 2
 #define INSTRUCTION_LENGTH 16
 
-// typedef struct{
-//     uint8_t opcode;
-//     uint8_t arg[MAX_NUM_ARGUMENTS];
-//     uint8_t arg_type[MAX_NUM_ARGUMENTS];
-// } Instruction; 
-
 typedef enum {
     REGISTER,
     IMMEDIATE,
@@ -74,7 +68,5 @@ typedef struct {
 extern const OpcodeEntry opcode_table[];
 
 int get_opcode(const char *name, Opcode *opcode_ptr);
-// uint16_t encode_instruction(const Instruction *instr);
-// Instruction decode_instruction(uint16_t instr);
 
 #endif 
