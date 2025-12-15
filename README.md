@@ -6,10 +6,10 @@ This project was created as an educational exploration of CPU-like programmabili
 The work was completed as part of a **university STM32 project**, where the requirement was to create something non-trivial using the STM32L475VG microcontroller.  
 My curiosity about how hardware becomes programmable led me to build a small virtual machine with a compiler and custom instruction set.
 
-My goal was to build a simple game console with two buttons, a joystick, and an [LCD](https://www.adafruit.com/product/4694) screen, along with an assembly-like language that can be used to write games compiling to my instruction set.
-
 ![img1](https://github.com/user-attachments/assets/1727c772-294b-4a73-91b6-03ddb5491297)
+*Prototype console with 3D printed case*
 
+My goal was to build a simple game console with two buttons, a joystick, and an [LCD](https://www.adafruit.com/product/4694) screen, along with an assembly-like language that can be used to write games compiling to my instruction set.
 
 ## Implementation 
 I wanted to keep the compiler as simple as possible since the university project was meant to focus on the embedded code and I had limited time.
@@ -46,5 +46,50 @@ Register values are prefixed with `R`. For arithmetic operations, results are al
   - `DRAW` – writes the frame buffer to the LCD screen
   - `WAIT <register/immediate>` – delays in milliseconds (maximum 1000 ms)
 
-See file `compiler/demo.in` for an example.
+## Build Instructions
+The project consists of a compiler and firmware running on the STM32. The steps below describe how to build and flash both.
+ 
+### Build the compiler
+```sh
+cd compiler
+mkdir build
+cd build
+cmake ..
+make
+```
+### Generate STM32 drivers
+Launch STM32CubeMX and pressing the "Generate Code" button on the top right (may require logging into account)
+```sh
+stm32cubemx stm32-vm.ioc
+```
+
+### Build and flash firmware to STM32
+```sh
+mkdir build
+cd build
+cmake ..
+make flash
+```
+### Upload and run program
+Connect to the UART shell and enter `load` to put the VM into program upload mode:
+```sh
+minicom -D /dev/ttyACM0 -b 115200
+load
+```
+The STM32 will now wait to receive a program
+
+Compile the demo program and send it over UART:
+```sh
+compiler demo.in -o demo.out
+send.sh demo.out ttyACM0
+```
+Once the program is received, type `run` into the serial monitor to execute it.
+
+
+
+https://github.com/user-attachments/assets/ff596cf6-4c50-4077-afc0-f75c84adc8f0
+
+
+
+
 
