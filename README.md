@@ -1,13 +1,15 @@
 
 ## About This Project
 
-
 This project was created as an educational exploration of CPU-like programmability on embedded hardware.  
 
 The work was completed as part of a **university STM32 project**, where the requirement was to create something non-trivial using the STM32L475VG microcontroller.  
 My curiosity about how hardware becomes programmable led me to build a small virtual machine with a compiler and custom instruction set.
 
 My goal was to build a simple game console with two buttons, a joystick, and an [LCD](https://www.adafruit.com/product/4694) screen, along with an assembly-like language that can be used to write games compiling to my instruction set.
+
+![img1](https://github.com/user-attachments/assets/1727c772-294b-4a73-91b6-03ddb5491297)
+
 
 ## Implementation 
 I wanted to keep the compiler as simple as possible since the university project was meant to focus on the embedded code and I had limited time.
@@ -16,7 +18,6 @@ To make compilation easier I chose a 16 bit instruction set which mostly shares 
 
 Only exceptions are `JMP`, `JZ`, `LBI`, they take only one argument from the next 16 bits
 > [opcode:4][dummy_data:12][arg1:16]
-
 
 ### Opcodes / Syntax
 
@@ -46,3 +47,4 @@ Register values are prefixed with `R`. For arithmetic operations, results are al
   - `WAIT <register/immediate>` – delays in milliseconds (maximum 1000 ms)
 
 See file `compiler/demo.in` for an example.
+
